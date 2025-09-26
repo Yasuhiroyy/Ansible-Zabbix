@@ -1,3 +1,8 @@
+# 構築手順書:VagrantでZabbixサーバーを構築する。
+zabbix.techbull.cloud.conf(zabbixサーバー)を構築し、dev.techbull.cloud(wordpress)を立ち上げて監視する。
+
+
+
 # 構成図
 ![スクリーンショット 2025-08-18 16.31.02.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/4081358/5523a3dd-eba2-44c3-9d6b-da3755391d1f.png)
 
