@@ -1,0 +1,30 @@
+- name: Install PHP 8.3 and PHP-FPM
+  apt:
+    name:
+      - php8.3
+      - php8.3-fpm
+      - php8.3-mysql
+      - php8.3-cli
+      - php8.3-curl
+      - php8.3-mbstring
+      - php8.3-xml
+    state: present
+    update_cache: yes
+ 
+- name: Ensure PHP-FPM is running and enabled
+  systemd:
+    name: php8.3-fpm
+    state: started
+    enabled: true
+ 
+- name: copy www.conf
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    backup: no
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - { src: roles/php/files/www.conf, dest: /etc/php/8.3/fpm/pool.d/www.conf }
+  notify: restart php-fpm

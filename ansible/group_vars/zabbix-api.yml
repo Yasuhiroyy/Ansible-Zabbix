@@ -1,0 +1,9 @@
+ansible_connection: httpapi
+ansible_network_os: community.zabbix.zabbix
+ansible_host: 192.168.64.46
+ansible_user: Admin
+ansible_httpapi_pass: zabbix
+ansible_httpapi_use_ssl: true
+ansible_httpapi_validate_certs: false  
+ansible_httpapi_port: 443
+ansible_zabbix_url_path: "api_jsonrpc.php"

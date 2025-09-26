@@ -1,0 +1,61 @@
+---
+- name: Ensure Nginx is installed
+  apt:
+    name: nginx
+    state: present
+ 
+- name: Ensure Nginx is running
+  systemd:
+    name: nginx
+    state: started
+    enabled: true
+ 
+- name: Create the document root directory for the virtual host
+  file:
+    path: "/var/www/{{ inventory_hostname }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+  
+- name: Create SSL directory
+  file:
+    path: /etc/nginx/ssl
+    state: directory
+    mode: '0755'
+ 
+- name: Copy SSL certificate based on cert_name variable
+  copy:
+    src: "/Users/yoshizawayasuhiro/git/menta/ansible/{{ cert_name }}.pem"
+    dest: "/etc/nginx/ssl/{{ cert_name }}.pem"
+    owner: root
+    group: root
+    mode: '0644'
+ 
+- name: Copy SSL key
+  copy:
+    src: "/Users/yoshizawayasuhiro/git/menta/ansible/{{ cert_name }}-key.pem"
+    dest: "/etc/nginx/ssl/{{ cert_name }}-key.pem"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Deploy nginx conf from template
+  template:
+    src: "{{ cert_name }}.conf.j2"
+    dest: "/etc/nginx/conf.d/{{ cert_name }}.conf"
+    owner: root
+    group: root
+    mode: '0644' 
+
+- name: Copy Virtual Host conf
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    backup: no
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - { src: "{{ inventory_hostname }}.conf.j2", dest: "/etc/nginx/conf.d/{{ inventory_hostname }}.conf" }
+  notify: restart nginx

@@ -1,0 +1,141 @@
+- name: Download Zabbix 5.0 release package
+  get_url:
+    url: "https://repo.zabbix.com/zabbix/5.0/ubuntu-arm64/pool/main/z/zabbix-release/zabbix-release_latest_5.0+ubuntu20.04_all.deb"
+    dest: "/tmp/zabbix-release_latest_5.0+ubuntu20.04_all.deb"
+
+- name: Check if Zabbix repo already exists
+  stat:
+    path: /etc/apt/sources.list.d/zabbix.list
+  register: zabbix_repo_file
+
+- name: Install Zabbix release package if repo not set
+  apt:
+    deb: "{{ zabbix_repo_pkg }}"
+  when: not zabbix_repo_file.stat.exists
+
+- name: Install Zabbix 5.0 release package (only if not already set)
+  apt:
+    deb: "/tmp/zabbix-release_latest_5.0+ubuntu20.04_all.deb"
+  when: "'5.0' not in zabbix_repo_content.stdout"
+
+- name: Install Zabbix components
+  apt:
+    name:
+      - zabbix-server-mysql
+      - zabbix-frontend-php
+      - zabbix-nginx-conf
+      - zabbix-agent
+    state: present
+    update_cache: yes
+
+- name: Create Zabbix database
+  mysql_db:
+    name: zabbix
+    state: present
+    encoding: utf8
+    collation: utf8_bin 
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    
+- name: Create Zabbix user
+  mysql_user:
+    name: zabbix
+    password: "{{ zabbix_db_password }}"
+    host: localhost
+    priv: "zabbix.*:ALL"
+    state: present
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+
+- name: Check if 'users' table exists
+  community.mysql.mysql_query:
+    login_user: "{{ zabbix_db_user }}"
+    login_password: "{{ zabbix_db_password }}"
+    login_db: "{{ zabbix_db_name }}"
+    query: "SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema='{{ zabbix_db_name }}' AND table_name='users';"
+  register: users_table_check
+
+
+- name: Import Zabbix database schema using zcat
+  ansible.builtin.shell: >
+    zcat /usr/share/doc/zabbix-server-mysql/create.sql.gz |
+    mysql -u {{ zabbix_db_user }} -p{{ zabbix_db_password }} {{ zabbix_db_name }}
+  when: users_table_check.query_result[0][0].count | default(0) | int == 0
+
+- name: Show DB password for debug
+  debug:
+    msg: "DB Password is {{ zabbix_db_password | default('undefined') }}"
+
+- name: Ensure /etc/zabbix/zabbix_server.conf.d exists
+  file:
+    path: /etc/zabbix/zabbix_server.conf.d
+    state: directory
+    owner: root
+    group: zabbix
+    mode: '0750'
+
+- name: Configure Zabbix server.conf
+  template:
+    src: zabbix_server.conf.j2 
+    dest: /etc/zabbix/zabbix_server.conf
+    owner: root
+    group: zabbix
+    mode: '0640'
+  notify: restart zabbix-server
+
+- name: Deploy Zabbix nginx site config
+  template:
+    src: ../../nginx/templates/zabbix.techbull.cloud.conf.j2
+    dest: /etc/nginx/sites-available/zabbix
+  notify: reload nginx
+
+- name: Disable default nginx site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: Enable Zabbix nginx site
+  file:
+    src: /etc/nginx/sites-available/zabbix
+    dest: /etc/nginx/sites-enabled/zabbix
+    state: link
+    force: yes
+  notify: reload nginx
+
+- name: Configure Zabbix frontend DB config (zabbix.conf.php)
+  template:
+    src: zabbix.conf.php.j2
+    dest: /etc/zabbix/web/zabbix.conf.php
+    owner: www-data
+    group: www-data
+    mode: '0640'
+
+- name: Start Zabbix services
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - zabbix-server
+    - zabbix-agent
+
+- name: Ensure python3-pip is installed
+  apt:
+    name: python3-pip
+    state: present
+    update_cache: yes
+
+- name: Install zabbix-api via pip
+  pip:
+    name: zabbix-api
+    executable: pip3
+    state: present
+
+- name: Ensure /var/log/zabbix exists
+  file:
+    path: /var/log/zabbix
+    state: directory
+    owner: zabbix
+    group: zabbix
+    mode: '0755'

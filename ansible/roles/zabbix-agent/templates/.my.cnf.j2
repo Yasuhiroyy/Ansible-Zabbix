@@ -1,0 +1,5 @@
+[client]
+user=zbx_monitor
+password={{ lookup('env', 'ZABBIX_MONITOR_PASSWORD') }}
+host=localhost
+socket=/var/run/mysqld/mysqld.sock

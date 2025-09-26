@@ -1,0 +1,86 @@
+- name: DEBUG - show mysql_root_password
+  debug:
+    var: mysql_root_password
+
+- name: Install MySQL 8.0
+  apt:
+    name: mysql-server
+    state: present
+    update_cache: yes
+ 
+- name: Install PyMySQL for MySQL support
+  apt:
+    name: python3-pymysql
+    state: present
+ 
+- name: Create log file
+  file:
+    path: /var/log/mysql/error.log
+    state: touch
+    owner: mysql
+    group: mysql
+    mode: '0640'
+ 
+- name: Copy MySQL root client config
+  template:
+    src: root_my.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: '0600'
+ 
+- name: Copy MySQL custom config for utf8mb4
+  copy:
+    src: mysqld_custom.cnf
+    dest: /etc/mysql/mysql.conf.d/mysqld_custom.cnf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart MySQL
+ 
+- name: Wait for MySQL socket to be ready
+  wait_for:
+    path: /var/run/mysqld/mysqld.sock
+    state: present
+    timeout: 30
+ 
+- name: Set root user to use mysql_native_password
+  mysql_user:
+    name: root
+    host: localhost
+    password: "{{ mysql_root_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    priv: "*.*:ALL,GRANT"
+    plugin: mysql_native_password
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    state: present
+ 
+- name: Create MySQL user for WordPress
+  mysql_user:
+    name: "{{ item.value.name }}"
+    password: "{{ item.value.password }}"
+    host: "{{ item.value.host }}"
+    priv: "{{ item.value.priv }}"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+  loop: "{{ new_users | dict2items }}"
+ 
+- name: Create WordPress database
+  mysql_db:
+    name: wordpress_db
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+ 
+- name: Grant all privileges to menta user on wordpress_db
+  mysql_user:
+    name: menta
+    host: localhost
+    password: "{{ menta_mysql_password }}"
+    priv: "wordpress_db.*:ALL"
+    state: present
+    login_user: root

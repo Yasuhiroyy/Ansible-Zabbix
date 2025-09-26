@@ -1,0 +1,81 @@
+---
+
+- name: Download Zabbix release package
+  get_url:
+    url: https://repo.zabbix.com/zabbix/5.0/ubuntu-arm64/pool/main/z/zabbix-release/zabbix-release_latest_5.0+ubuntu24.04_all.deb
+    dest: /tmp/zabbix-release.deb
+
+- name: Install Zabbix release package
+  apt:
+    deb: /tmp/zabbix-release.deb
+    force: true
+
+- name: Install Zabbix agent
+  apt:
+    name: zabbix-agent
+    state: present
+    update_cache: true
+
+- name: Configure Zabbix agent server IPs
+  template:
+    src: zabbix_agentd.conf.j2
+    dest: /etc/zabbix/zabbix_agentd.conf
+  notify: Restart zabbix agent
+
+- name: Copy template_db_mysql.conf
+  copy:
+    src: template_db_mysql.conf
+    dest: /etc/zabbix/zabbix_agentd.d/template_db_mysql.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart zabbix agent
+
+- name: Ensure /var/lib/zabbix directory exists
+  file:
+    path: /var/lib/zabbix
+    state: directory
+    owner: zabbix
+    group: zabbix
+    mode: '0750'
+
+- name: Copy ss_get_mysql_stats.php
+  copy:
+    src: ss_get_mysql_stats.php
+    dest: /var/lib/zabbix/ss_get_mysql_stats.php
+    owner: zabbix
+    group: zabbix
+    mode: '0755'
+
+- name: Allow zabbix to run ss_get_mysql_stats.php without password
+  copy:
+    dest: /etc/sudoers.d/zabbix
+    content: "zabbix ALL=(ALL) NOPASSWD: /var/lib/zabbix/ss_get_mysql_stats.php *\n"
+    owner: root
+    group: root
+    mode: '0440'
+
+- name: Create Zabbix monitor user
+  mysql_user:
+    name: zbx_monitor
+    host: localhost
+    password: "{{ lookup('env', 'ZABBIX_MONITOR_PASSWORD') }}"
+    priv: '*.*:PROCESS,SHOW DATABASES,REPLICATION CLIENT,SHOW VIEW,SELECT'
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    update_password: on_create
+
+- name: Copy .my.cnf to Zabbix user's home
+  template:
+    src: .my.cnf.j2
+    dest: /var/lib/zabbix/.my.cnf
+    owner: zabbix
+    group: zabbix
+    mode: '0600'
+
+- name: Ensure zabbix-agent is running
+  systemd:
+    name: zabbix-agent
+    state: started
+    enabled: true

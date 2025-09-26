@@ -1,0 +1,29 @@
+---
+- name: Create New User
+  user:
+    name: "{{ item.key }}"
+    password: "{{ item.value.initial_password }}"
+    update_password: on_create
+    groups: "{{ item.value.groups }}"
+    comment: "{{ item.value.comment }}"
+    shell: /bin/bash 
+    home: /home/{{ item.key }}
+    state: present
+  loop: "{{ new_users | dict2items }}"
+
+- name: Distribute authorized key
+  ansible.posix.authorized_key:
+    user: "{{ item.key }}"
+    key: "{{ lookup('file', '~/.ssh/wp-server.pub') }}"
+    state: present
+  loop: "{{ new_users | dict2items }}"
+
+- name: Deploy temporary sudoers files
+  template:
+    src: "{{ item.value.priv }}_sudoers.j2"
+    dest: "/etc/sudoers.d/{{ item.key }}"
+    owner: root
+    group: root
+    mode: 0400
+    validate: 'visudo -c -f %s'
+  loop: "{{ new_users | dict2items }}"

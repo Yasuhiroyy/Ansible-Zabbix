@@ -1,0 +1,9 @@
+---
+new_users: 
+  menta: #作成するユーザ
+    comment: "Add User menta" 
+    initial_password: "{{ 'MyMentaPassword123' | password_hash('sha512') }}"
+    groups: menta 
+    add_authorized_keys: true 
+    add_sudoers: true 
+    priv: menta 

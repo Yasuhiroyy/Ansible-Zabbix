@@ -1,0 +1,27 @@
+server {
+    listen 80; 
+    server_name {{ inventory_hostname }}; 
+    return 301 https://$host$request_uri;
+}
+ 
+server {
+    listen 443 ssl;
+    server_name {{ inventory_hostname }};
+    ssl_certificate     /etc/nginx/ssl/{{ inventory_hostname }}.pem;
+    ssl_certificate_key /etc/nginx/ssl/{{ inventory_hostname }}-key.pem;
+    root /usr/share/zabbix;
+    index index.php index.html;
+    access_log /var/log/nginx/{{ inventory_hostname }}.access.log custom_log;
+    error_log /var/log/nginx/{{ inventory_hostname }}.error.log;
+ 
+    location / {
+        try_files $uri $uri/ =404;
+    }
+ 
+    location ~ \.php$ {
+        include /etc/nginx/fastcgi_params;
+        fastcgi_pass unix:/run/php/php{{ php_version }}-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}

@@ -1,0 +1,59 @@
+---
+- name: Setup users
+  hosts: zabbix_servers:dev_wp_servers
+  vars_files:
+    - ./.env.yml
+  roles:
+    - users
+    
+- name: Setup Wordpress
+  hosts: dev_wp_servers
+  gather_facts: false
+  vars_files:
+    - ./.env.yml
+  roles:
+    - nginx
+    - php
+    - mysql
+    - wordpress
+    - zabbix-agent
+
+- name: Setup Zabbix core components
+  hosts: zabbix_servers
+  gather_facts: false
+  vars_files:
+    - ./.env.yml
+  roles:
+    - nginx
+    - php
+    - mysql
+    - zabbix-server
+    - zabbix-agent  
+
+- name: Wait for Zabbix API to respond with valid version info
+  hosts: zabbix_servers
+  gather_facts: false
+  tasks:
+    - name: Check Zabbix API version
+      uri:
+        url: https://{{ ansible_host }}/api_jsonrpc.php
+        method: POST
+        body: '{"jsonrpc":"2.0","method":"apiinfo.version","id":1,"auth":null,"params":{}}'
+        headers:
+          Content-Type: application/json
+        status_code: 200
+        validate_certs: no
+      register: result
+      until: result.json.result is defined
+      retries: 10
+      delay: 6
+
+- name: Register host to Zabbix via API
+  hosts: zabbix_api
+  gather_facts: false
+  become: false
+  vars_files:
+    - ./.env.yml
+  roles:
+    - zabbix-api
+

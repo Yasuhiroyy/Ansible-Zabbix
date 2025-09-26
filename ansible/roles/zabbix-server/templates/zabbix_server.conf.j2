@@ -1,0 +1,9 @@
+LogFile=/var/log/zabbix/zabbix_server.log
+PidFile=/run/zabbix/zabbix_server.pid
+
+DBHost=localhost
+DBName={{ zabbix_db_name }}
+DBUser={{ zabbix_db_user }}
+DBPassword={{ zabbix_db_password }}
+
+Include=/etc/zabbix/zabbix_server.conf.d/*.conf

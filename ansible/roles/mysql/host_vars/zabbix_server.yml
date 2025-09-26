@@ -1,0 +1,9 @@
+mysql_databases:
+  - name: zabbix
+    encoding: utf8
+    collation: utf8_bin
+
+mysql_users:
+  - name: zabbix
+    password: "{{ lookup('env', 'MENTA_MYSQL_PASSWORD') }}"
+    priv: "zabbix.*:ALL"

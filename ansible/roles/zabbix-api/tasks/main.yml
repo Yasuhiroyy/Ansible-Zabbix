@@ -1,0 +1,93 @@
+- name: create host dev.menta.me
+  community.zabbix.zabbix_host:
+    host_name: dev.menta.me
+    host_groups:
+      - Linux servers
+    link_templates:
+      - Template DB MySQL by Zabbix agent
+      - Template OS Linux by Zabbix agent
+    status: enabled
+    state: present
+    interfaces:
+      - type: 1
+        main: 1
+        useip: 1
+        ip: 192.168.64.47
+        dns: ""
+        port: 10050
+
+
+- name: Get host info from Zabbix
+  community.zabbix.zabbix_host_info:
+    host_name: dev.menta.me
+  register: host_info
+
+- name: Set interface ID
+  set_fact:
+    iface_id: "{{ host_info.hosts[0].hostinterfaces[0].interfaceid }}"
+
+- name: Create disk usage (percent used) item
+  community.zabbix.zabbix_item:
+    host_name: dev.menta.me
+    name: Disk space used on /
+    params:
+      key: vfs.fs.size[/,pused]
+      type: zabbix_agent
+      value_type: numeric_unsigned
+      delay: 30s
+      interfaceid: "{{ iface_id }}"
+    state: present
+
+- name: create nginx process item
+  community.zabbix.zabbix_item:
+    host_name: dev.menta.me
+    name: Nginx process count
+    params:
+      key: proc.num[nginx]
+      type: zabbix_agent
+      value_type: numeric_unsigned
+      delay: 30s
+      interfaceid: "{{ iface_id }}"
+    state: present
+
+- name: create mysqld process item
+  community.zabbix.zabbix_item:
+    host_name: dev.menta.me
+    name: MySQL process count
+    params:
+      key: proc.num[mysqld]
+      type: zabbix_agent
+      value_type: numeric_unsigned
+      delay: 30s
+      interfaceid: "{{ iface_id }}"
+    state: present
+
+- name: Create Zabbix item for MySQL deadlock detection
+  community.zabbix.zabbix_item:
+    host_name: dev.menta.me
+    name: MySQL Deadlock Count
+    params:
+      key: mysql.deadlocks["{$MYSQL.HOST}","{$MYSQL.PORT}"]
+      type: zabbix_agent
+      value_type: numeric_unsigned
+      delay: 60s
+      interfaceid: "{{ iface_id }}"
+    state: present
+
+- name: create zabbix trigger
+  community.zabbix.zabbix_trigger:
+    name: Disk usage over 90%
+    host_name: dev.menta.me
+    params:
+      severity: high
+      expression: "{dev.menta.me:vfs.fs.size[/,pused].last()}>=90"
+      manual_close: false
+      enabled: true
+    state: present
+
+- name: Set global macro {$ZABBIX.URL}
+  community.zabbix.zabbix_globalmacro:
+    macro_name: "{$ZABBIX.URL}"
+    macro_value: "http://192.168.64.46/zabbix/"
+    macro_type: text
+    state: present
