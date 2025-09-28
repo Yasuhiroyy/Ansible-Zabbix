@@ -6,6 +6,10 @@ zabbix.techbull.cloud.conf(zabbixサーバー)を構築し、dev.techbull.cloud(
 # 構成図
 ![スクリーンショット 2025-08-18 16.31.02.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/4081358/5523a3dd-eba2-44c3-9d6b-da3755391d1f.png)
 
+# 実装後
+イメージ
+<img width="3260" height="1800" alt="スクリーンショット 2025-08-17 15 49 43" src="https://github.com/user-attachments/assets/2030fc2b-d030-481b-8d35-5b8536dd3966" />
+
 # 構築環境
 ### ホストOS
 - macOS Sonoma 15.1（Apple M1チップ）
