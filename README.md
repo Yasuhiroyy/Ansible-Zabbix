@@ -1,4 +1,4 @@
-# 構築手順書:VagrantでZabbixサーバーを構築する。
+# 構築手順書:AnsibleでZabbixサーバーを構築する。
 zabbix.techbull.cloud.conf(zabbixサーバー)を構築し、dev.techbull.cloud(wordpress)を立ち上げて監視する。
 
 
@@ -8,24 +8,24 @@ zabbix.techbull.cloud.conf(zabbixサーバー)を構築し、dev.techbull.cloud(
 
 # 構築環境
 ### ホストOS
-・macOS Sonoma 15.1（Apple M1チップ）
+- macOS Sonoma 15.1（Apple M1チップ）
 
 # サーバー構築
 ## WordPressサーバー
-・Webサーバー：Nginx（latest）
-・PHP：8.3
-・データベース：MySQL 8.0.40
-・CMS：WordPress
+- Webサーバー：Nginx（latest）
+- PHP：8.3
+- データベース：MySQL 8.0.40
+- CMS：WordPress
 ### ゲストOS
-・Ubuntu 22.04（Multipass上で構築）
+- Ubuntu 22.04（Multipass上で構築）
 
 ## Zabbixサーバー
-・Zabbix：5.0.x
-・Webサーバー：Nginx（latest）
-・PHP：7.4
-・データベース：MySQL 8.0.40
+- Zabbix：5.0.x
+- Webサーバー：Nginx（latest）
+- PHP：7.4
+- データベース：MySQL 8.0.40
 ### ゲストOS
-・Ubuntu 20.04（Multipass上で構築）
+- Ubuntu 20.04（Multipass上で構築）
 
 
 ## 本環境のディレクトリ構成
